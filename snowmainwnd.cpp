@@ -4,6 +4,7 @@
 #include <QTextStream>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QScrollBar>
 #include <QDebug>
 
 SnowMainWnd::SnowMainWnd(QWidget *parent) :
@@ -22,22 +23,32 @@ SnowMainWnd::~SnowMainWnd()
 
 void SnowMainWnd::onStartButtonClicked()
 {
-    QFile inputFile("D:\\top20line.txt");
+    QFile inputFile(this->ui->lineEdit_InputFilePath->text());
     if( !inputFile.open(QFile::ReadOnly) )
     {
         QMessageBox::critical(this, "Error", "Unable to open file");
         return;
     }
 
+    QFile outputFile(this->ui->lineEdit_OutputFilePath->text());
+    if( !outputFile.open(QFile::WriteOnly) )
+    {
+        QMessageBox::critical(this, "Error", "Distination dir is read-only");
+        return;
+    }
+
     QTextStream inputFileStream(&inputFile);
+    QTextStream outputFileStream(&outputFile);
     QString stringBuffer;
+
+    // Fetch each line from the file
     while(inputFileStream.readLineInto(&stringBuffer))
     {
-        if(stringBuffer.at(0) == '#') // Comments
+        if(stringBuffer.at(0) == '#') // Comments, skip
         {
             continue;
         }
-        this->ui->textEdit_Info->append(stringBuffer);
+        //this->ui->textEdit_Info->append(stringBuffer);
 
         QStringList dataFields;
         dataFields = stringBuffer.split('\t');
@@ -47,6 +58,7 @@ void SnowMainWnd::onStartButtonClicked()
             return;
         }
 
+        // Parse each data field of the line
         GtfStructure gtfFields;
         gtfFields.seqName = dataFields.at(0);
         gtfFields.source = dataFields.at(1);
@@ -58,6 +70,14 @@ void SnowMainWnd::onStartButtonClicked()
         gtfFields.frame = dataFields.at(7);
         gtfFields.attributes = dataFields.at(8).split(';',QString::SkipEmptyParts);
 
+        // Save fields useful to <outputFile> only
+        stringBuffer = gtfFields.seqName + ',' + gtfFields.start
+                + ',' +gtfFields.end + ',' + gtfFields.attributes.
+                filter("gene_id",Qt::CaseInsensitive).join(',');
+
+        this->ui->textEdit_Info->append(stringBuffer);
+        this->ui->textEdit_Info->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
+        outputFileStream << stringBuffer << '\n';
     }
 
 }
