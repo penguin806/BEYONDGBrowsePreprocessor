@@ -2,25 +2,11 @@
 #define SNOWMAINWND_H
 
 #include <QDialog>
+#include "fileprocessingthread.h"
 
 namespace Ui {
 class SnowMainWnd;
 }
-
-struct gtfStruct
-{
-    gtfStruct() {}
-    QString seqName;
-    QString source;
-    QString feature;
-    QString start;
-    QString end;
-    QString score;
-    QString strand;
-    QString frame;
-    QStringList attributes;
-};
-typedef gtfStruct GtfStructure;
 
 class SnowMainWnd : public QDialog
 {
@@ -36,8 +22,13 @@ private slots:
     void on_toolButton_InputFileChoose_clicked();
     void on_toolButton_OutputFileChoose_clicked();
 
+    void onFileThreadProgressUpdated(QString newLine);
+    void onFileThreadErrorOccured(QString errorReason);
+    void onFileThreadFinished();
+
 private:
     Ui::SnowMainWnd *ui;
+    FileProcessingThread *fileThread;
 };
 
 #endif // SNOWMAINWND_H

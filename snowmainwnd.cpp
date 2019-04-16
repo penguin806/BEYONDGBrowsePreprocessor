@@ -1,7 +1,5 @@
 #include "snowmainwnd.h"
 #include "ui_snowmainwnd.h"
-#include <QFile>
-#include <QTextStream>
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QScrollBar>
@@ -12,6 +10,7 @@ SnowMainWnd::SnowMainWnd(QWidget *parent) :
     ui(new Ui::SnowMainWnd)
 {
     ui->setupUi(this);
+    this->fileThread = nullptr;
     QObject::connect(this->ui->pushButton_Start,SIGNAL(clicked(bool)),
                      this,SLOT(onStartButtonClicked()));
 }
@@ -23,63 +22,20 @@ SnowMainWnd::~SnowMainWnd()
 
 void SnowMainWnd::onStartButtonClicked()
 {
-    QFile inputFile(this->ui->lineEdit_InputFilePath->text());
-    if( !inputFile.open(QFile::ReadOnly) )
-    {
-        QMessageBox::critical(this, "Error", "Unable to open file");
-        return;
-    }
+    this->fileThread = new FileProcessingThread(
+                this->ui->lineEdit_InputFilePath->text(),
+                this->ui->lineEdit_OutputFilePath->text());
 
-    QFile outputFile(this->ui->lineEdit_OutputFilePath->text());
-    if( !outputFile.open(QFile::WriteOnly) )
-    {
-        QMessageBox::critical(this, "Error", "Distination dir is read-only");
-        return;
-    }
+    QObject::connect(this->fileThread,SIGNAL(progressUpdated(QString)),
+                     this,SLOT(onFileThreadProgressUpdated(QString)));
+    QObject::connect(this->fileThread,SIGNAL(errorOccured(QString)),
+                     this,SLOT(onFileThreadErrorOccured(QString)));
+    QObject::connect(this->fileThread,SIGNAL(finished()),
+                     this,SLOT(onFileThreadFinished()));
 
-    QTextStream inputFileStream(&inputFile);
-    QTextStream outputFileStream(&outputFile);
-    QString stringBuffer;
-
-    // Fetch each line from the file
-    while(inputFileStream.readLineInto(&stringBuffer))
-    {
-        if(stringBuffer.at(0) == '#') // Comments, skip
-        {
-            continue;
-        }
-        //this->ui->textEdit_Info->append(stringBuffer);
-
-        QStringList dataFields;
-        dataFields = stringBuffer.split('\t');
-        if(dataFields.length() < 9)
-        {
-            QMessageBox::critical(this,"Error","Not a valid gtf file");
-            return;
-        }
-
-        // Parse each data field of the line
-        GtfStructure gtfFields;
-        gtfFields.seqName = dataFields.at(0);
-        gtfFields.source = dataFields.at(1);
-        gtfFields.feature = dataFields.at(2);
-        gtfFields.start = dataFields.at(3);
-        gtfFields.end = dataFields.at(4);
-        gtfFields.score = dataFields.at(5);
-        gtfFields.strand = dataFields.at(6);
-        gtfFields.frame = dataFields.at(7);
-        gtfFields.attributes = dataFields.at(8).split(';',QString::SkipEmptyParts);
-
-        // Save fields useful to <outputFile> only
-        stringBuffer = gtfFields.seqName + ',' + gtfFields.start
-                + ',' +gtfFields.end + ',' + gtfFields.attributes.
-                filter("gene_id",Qt::CaseInsensitive).join(',');
-
-        this->ui->textEdit_Info->append(stringBuffer);
-        this->ui->textEdit_Info->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
-        outputFileStream << stringBuffer << '\n';
-    }
-
+    this->ui->textEdit_Info->clear();
+    this->ui->pushButton_Start->setDisabled(true);
+    this->fileThread->start();
 }
 
 void SnowMainWnd::on_toolButton_InputFileChoose_clicked()
@@ -94,4 +50,26 @@ void SnowMainWnd::on_toolButton_OutputFileChoose_clicked()
     QString outputFilePath;
     outputFilePath = QFileDialog::getSaveFileName(this, "Save as");
     this->ui->lineEdit_OutputFilePath->setText(outputFilePath);
+}
+
+void SnowMainWnd::onFileThreadProgressUpdated(QString newLine)
+{
+    this->ui->textEdit_Info->append(newLine);
+    this->ui->textEdit_Info->verticalScrollBar()->triggerAction(QScrollBar::SliderToMaximum);
+}
+
+void SnowMainWnd::onFileThreadErrorOccured(QString errorReason)
+{
+    QMessageBox::critical(this,"Error",errorReason);
+    this->ui->pushButton_Start->setDisabled(false);
+    this->fileThread->exit();
+}
+
+void SnowMainWnd::onFileThreadFinished()
+{
+    this->ui->pushButton_Start->setDisabled(false);
+    this->fileThread->deleteLater();
+    this->fileThread = nullptr;
+
+    this->onFileThreadProgressUpdated("Finished!");
 }

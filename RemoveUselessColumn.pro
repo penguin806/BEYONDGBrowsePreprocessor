@@ -25,10 +25,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        snowmainwnd.cpp
+        snowmainwnd.cpp \
+    fileprocessingthread.cpp
 
 HEADERS += \
-        snowmainwnd.h
+        snowmainwnd.h \
+    fileprocessingthread.h
 
 FORMS += \
         snowmainwnd.ui
