@@ -74,7 +74,6 @@ void SnowMainWnd::onFileThreadErrorOccured(QString errorReason)
 {
     QMessageBox::critical(this,"Error",errorReason);
     this->ui->pushButton_Start->setDisabled(false);
-    this->fileThread->exit();
 }
 
 void SnowMainWnd::onFileThreadFinished()
