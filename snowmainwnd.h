@@ -2,6 +2,7 @@
 #define SNOWMAINWND_H
 
 #include <QDialog>
+#include <QElapsedTimer>
 #include "fileprocessingthread.h"
 
 namespace Ui {
@@ -29,6 +30,7 @@ private slots:
 private:
     Ui::SnowMainWnd *ui;
     FileProcessingThread *fileThread;
+    QElapsedTimer *elapsedTimer;
 };
 
 #endif // SNOWMAINWND_H

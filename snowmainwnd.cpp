@@ -3,6 +3,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QScrollBar>
+#include <QElapsedTimer>
 #include <QDebug>
 
 SnowMainWnd::SnowMainWnd(QWidget *parent) :
@@ -11,6 +12,8 @@ SnowMainWnd::SnowMainWnd(QWidget *parent) :
 {
     ui->setupUi(this);
     this->fileThread = nullptr;
+    this->elapsedTimer = new QElapsedTimer();
+
     QObject::connect(this->ui->pushButton_Start,SIGNAL(clicked(bool)),
                      this,SLOT(onStartButtonClicked()));
 }
@@ -36,6 +39,15 @@ void SnowMainWnd::onStartButtonClicked()
     this->ui->textEdit_Info->clear();
     this->ui->pushButton_Start->setDisabled(true);
     this->fileThread->start();
+
+    if(this->elapsedTimer->isValid())
+    {
+        this->elapsedTimer->restart();
+    }
+    else
+    {
+        this->elapsedTimer->start();
+    }
 }
 
 void SnowMainWnd::on_toolButton_InputFileChoose_clicked()
@@ -71,5 +83,7 @@ void SnowMainWnd::onFileThreadFinished()
     this->fileThread->deleteLater();
     this->fileThread = nullptr;
 
-    this->onFileThreadProgressUpdated("Finished!");
+    this->onFileThreadProgressUpdated("Finished! Elapsed Time: " +
+                    QString::number(this->elapsedTimer->elapsed() / 1000) +
+                    "s");
 }
