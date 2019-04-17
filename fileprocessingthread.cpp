@@ -59,18 +59,31 @@ void FileProcessingThread::run()
         gtfFields.attributes = dataFields.at(8).split(';',QString::SkipEmptyParts);
 
         // Save fields useful to <outputFile> only
-        stringBuffer = gtfFields.seqName + ',' + gtfFields.start
-                + ',' +gtfFields.end + ',' + gtfFields.attributes.
-                filter("gene_id",Qt::CaseInsensitive).join(',');
-        outputFileStream << stringBuffer << '\n';
 
-        // emit progressUpdated(stringBuffer);
+        QString attributeNeeded;
+        attributeNeeded = gtfFields.attributes.
+                filter("protein_id",Qt::CaseInsensitive).join(',');
+        //      filter("gene_id",Qt::CaseInsensitive).join(',');
+
         loopCounts++;
-        if( 0 == loopCounts % 500)
+        if(attributeNeeded.isEmpty())
         {
-            emit progressUpdated("Processing the " +
-                                 QString::number(loopCounts) +
-                                 "th line: " + stringBuffer);
+            // protein_id Not Found, Skip
         }
+        else
+        {
+            stringBuffer = gtfFields.seqName + ',' + gtfFields.start
+                    + ',' +gtfFields.end + ',' + attributeNeeded;
+            outputFileStream << stringBuffer << '\n';
+
+            // emit progressUpdated(stringBuffer);
+            if( 0 == loopCounts % 500)
+            {
+                emit progressUpdated("Processing the " +
+                                     QString::number(loopCounts) +
+                                     "th line: " + stringBuffer);
+            }
+        }
+
     }
 }
