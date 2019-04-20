@@ -26,11 +26,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         snowmainwnd.cpp \
-    fileprocessingthread.cpp
+    fileprocessingthread.cpp \
+    mappingfromuniprot.cpp
 
 HEADERS += \
         snowmainwnd.h \
-    fileprocessingthread.h
+    fileprocessingthread.h \
+    mappingfromuniprot.h
 
 FORMS += \
         snowmainwnd.ui

@@ -30,6 +30,7 @@ signals:
 
 protected:
     virtual void run();
+    QStringRef extractProteinId(QString attrProteinId);
 
 private:
     QString inputFilePath;

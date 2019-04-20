@@ -60,20 +60,22 @@ void FileProcessingThread::run()
 
         // Save fields useful to <outputFile> only
 
-        QString attributeNeeded;
-        attributeNeeded = gtfFields.attributes.
+        QString attributeProteinId; // Need protein_id only
+        attributeProteinId = gtfFields.attributes.
                 filter("protein_id",Qt::CaseInsensitive).join(',');
-        //      filter("gene_id",Qt::CaseInsensitive).join(',');
 
         loopCounts++;
-        if(attributeNeeded.isEmpty())
+        if(attributeProteinId.isEmpty())
         {
             // protein_id Not Found, Skip
         }
         else
         {
+            QString proteinIdExtracted =
+                    this->extractProteinId(attributeProteinId).toString();
+
             stringBuffer = gtfFields.seqName + ',' + gtfFields.start
-                    + ',' +gtfFields.end + ',' + attributeNeeded;
+                    + ',' +gtfFields.end + ',' + proteinIdExtracted;
             outputFileStream << stringBuffer << '\n';
 
             // emit progressUpdated(stringBuffer);
@@ -85,5 +87,36 @@ void FileProcessingThread::run()
             }
         }
 
+    }
+}
+
+QStringRef FileProcessingThread::extractProteinId(QString attrProteinId)
+{
+    // Example input: protein_id "ENSP00000493376.2"
+    // Output: ENSP00000493376 (No version)
+    int firstDoubleQuotationPos = attrProteinId.indexOf('\"');
+    int lastDoubleQuotationPos = attrProteinId.lastIndexOf('\"');
+
+    if(firstDoubleQuotationPos == -1
+            ||lastDoubleQuotationPos == -1
+            ||(firstDoubleQuotationPos+1) >= lastDoubleQuotationPos)
+    {
+        emit errorOccured("Attribute protein_id invalid");
+        return QStringRef();
+    }
+    else
+    {
+        int lastPointPos = attrProteinId.lastIndexOf('.');
+        if(lastPointPos < lastDoubleQuotationPos &&
+                lastPointPos > firstDoubleQuotationPos)
+        {
+            return attrProteinId.midRef(firstDoubleQuotationPos + 1,
+                    lastPointPos - firstDoubleQuotationPos - 1);
+        }
+        else
+        {
+            return attrProteinId.midRef(firstDoubleQuotationPos + 1,
+                    lastDoubleQuotationPos - firstDoubleQuotationPos - 1);
+        }
     }
 }
