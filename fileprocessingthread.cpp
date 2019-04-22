@@ -1,4 +1,5 @@
 #include "fileprocessingthread.h"
+#include "mappingfromuniprot.h"
 #include <QFile>
 #include <QTextStream>
 
@@ -28,6 +29,8 @@ void FileProcessingThread::run()
     QTextStream outputFileStream(&outputFile);
     QString stringBuffer;
     qint32 loopCounts = 0;
+
+    MappingFromUniprot mapUniprot;
 
     // Fetch each line from the file
     while(inputFileStream.readLineInto(&stringBuffer))
@@ -74,6 +77,9 @@ void FileProcessingThread::run()
             QString proteinIdExtracted =
                     this->extractProteinId(attributeProteinId).toString();
 
+            mapUniprot.insertIntoProteinMap(proteinIdExtracted,QString());
+            // Insert proteinId into map, preparing for query from uniprot
+
             stringBuffer = gtfFields.seqName + ',' + gtfFields.start
                     + ',' +gtfFields.end + ',' + proteinIdExtracted;
             outputFileStream << stringBuffer << '\n';
@@ -86,8 +92,10 @@ void FileProcessingThread::run()
                                      "th line: " + stringBuffer);
             }
         }
-
     }
+    // Finished: Reading from input file and Writing to output file!
+    // Next: proteinId -> query from uniprot -> uniprotKB
+
 }
 
 QStringRef FileProcessingThread::extractProteinId(QString attrProteinId)
