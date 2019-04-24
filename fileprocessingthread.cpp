@@ -2,15 +2,37 @@
 #include "mappingfromuniprot.h"
 #include <QFile>
 #include <QTextStream>
+#include <QThread>
 
-FileProcessingThread::FileProcessingThread(QString inputFilePath, QString outputFilePath)
+FileProcessingThread::FileProcessingThread(QString inputFilePath,
+                                           QString outputFilePath,
+                                           QObject *parent) : QThread(parent)
 {
     this->inputFilePath = inputFilePath;
     this->outputFilePath = outputFilePath;
 }
 
+void FileProcessingThread::onUniprotMappingFinished(QString responseText)
+{
+    emit progressUpdated("Request Finished!\nResponse from Uniprot:\n" + responseText);
+
+
+    emit progressUpdated("Thread exited. [Id: " +
+                         QString::number(quintptr(QThread::currentThreadId())) + "]");
+    this->mapUniprot->deleteLater();
+    this->quit();
+}
+
 void FileProcessingThread::run()
 {
+    emit progressUpdated("Thread started. [Id: " +
+                         QString::number(quintptr(QThread::currentThreadId())) + "]");
+
+    this->mapUniprot = new MappingFromUniprot();
+    QObject::connect(this->mapUniprot,SIGNAL(uniprotMappingFinished(QString)),
+                     this,SLOT(onUniprotMappingFinished(QString)));
+
+
     QFile inputFile(inputFilePath);
     if( !inputFile.open(QFile::ReadOnly) )
     {
@@ -29,8 +51,6 @@ void FileProcessingThread::run()
     QTextStream outputFileStream(&outputFile);
     QString stringBuffer;
     qint32 loopCounts = 0;
-
-    MappingFromUniprot mapUniprot;
 
     // Fetch each line from the file
     while(inputFileStream.readLineInto(&stringBuffer))
@@ -77,7 +97,7 @@ void FileProcessingThread::run()
             QString proteinIdExtracted =
                     this->extractProteinId(attributeProteinId).toString();
 
-            mapUniprot.insertIntoProteinMap(proteinIdExtracted,QString());
+            mapUniprot->insertIntoProteinMap(proteinIdExtracted,QString());
             // Insert proteinId into map, preparing for query from uniprot
 
             stringBuffer = gtfFields.seqName + ',' + gtfFields.start
@@ -95,7 +115,12 @@ void FileProcessingThread::run()
     }
     // Finished: Reading from input file and Writing to output file!
     // Next: proteinId -> query from uniprot -> uniprotKB
+    this->sleep(1);
 
+    mapUniprot->startRequestToQueryUniprot();
+    emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
+
+    this->exec();
 }
 
 QStringRef FileProcessingThread::extractProteinId(QString attrProteinId)

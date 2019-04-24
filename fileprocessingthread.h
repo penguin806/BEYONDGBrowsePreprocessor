@@ -2,6 +2,7 @@
 #define FILEPROCESSINGTHREAD_H
 
 #include <QThread>
+#include "mappingfromuniprot.h"
 
 struct gtfStruct
 {
@@ -22,11 +23,14 @@ class FileProcessingThread : public QThread
 {
     Q_OBJECT
 public:
-    FileProcessingThread(QString inputFilePath, QString outputFilePath);
+    FileProcessingThread(QString inputFilePath, QString outputFilePath, QObject *parent = Q_NULLPTR);
 
 signals:
     void progressUpdated(QString newLine);
     void errorOccured(QString errorReason);
+
+public slots:
+    void onUniprotMappingFinished(QString responseText);
 
 protected:
     virtual void run();
@@ -35,6 +39,7 @@ protected:
 private:
     QString inputFilePath;
     QString outputFilePath;
+    MappingFromUniprot *mapUniprot;
 };
 
 #endif // FILEPROCESSINGTHREAD_H
