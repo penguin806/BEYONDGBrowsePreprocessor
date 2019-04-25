@@ -32,23 +32,44 @@ void FileProcessingThread::run()
     QObject::connect(this->mapUniprot,SIGNAL(uniprotMappingFinished(QString)),
                      this,SLOT(onUniprotMappingFinished(QString)));
 
+    this->processingInputFileAndWritingToTempFile();
+    // Finished: Reading from input file and Writing to output file!
+    // Next: proteinId -> query from uniprot -> uniprotKB
+    this->sleep(1);
+    this->mapUniprot->startRequestToQueryUniprot();
+    emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
 
+    this->exec();
+}
+
+void FileProcessingThread::processingInputFileAndWritingToTempFile()
+{
     QFile inputFile(inputFilePath);
     if( !inputFile.open(QFile::ReadOnly) )
     {
         emit errorOccured("Unable to open file");
         return;
     }
+    else
+    {
+        emit progressUpdated("Open input file <" + inputFilePath + "> Success!");
+    }
 
-    QFile outputFile(outputFilePath);
-    if( !outputFile.open(QFile::WriteOnly) )
+    this->temporaryFilePath = outputFilePath + ".tmp";
+    //QFile outputFile(outputFilePath);
+    QFile tempOutputFile(this->temporaryFilePath);
+    if( !tempOutputFile.open(QFile::WriteOnly) )
     {
         emit errorOccured("Distination dir is read-only");
         return;
     }
+    else
+    {
+        emit progressUpdated("Create temporary file <" + temporaryFilePath + "> Success!");
+    }
 
     QTextStream inputFileStream(&inputFile);
-    QTextStream outputFileStream(&outputFile);
+    QTextStream outputFileStream(&tempOutputFile);
     QString stringBuffer;
     qint32 loopCounts = 0;
 
@@ -112,15 +133,12 @@ void FileProcessingThread::run()
                                      "th line: " + stringBuffer);
             }
         }
+
     }
-    // Finished: Reading from input file and Writing to output file!
-    // Next: proteinId -> query from uniprot -> uniprotKB
-    this->sleep(1);
 
-    mapUniprot->startRequestToQueryUniprot();
-    emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
+    // Finished removing useless columns, and wrote to TemporaryFile
+    // Protein_id map init finished
 
-    this->exec();
 }
 
 QStringRef FileProcessingThread::extractProteinId(QString attrProteinId)

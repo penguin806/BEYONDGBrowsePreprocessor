@@ -34,11 +34,13 @@ public slots:
 
 protected:
     virtual void run();
+    void processingInputFileAndWritingToTempFile();
     QStringRef extractProteinId(QString attrProteinId);
 
 private:
     QString inputFilePath;
     QString outputFilePath;
+    QString temporaryFilePath;
     MappingFromUniprot *mapUniprot;
 };
 
