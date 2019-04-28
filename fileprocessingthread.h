@@ -30,11 +30,13 @@ signals:
     void errorOccured(QString errorReason);
 
 public slots:
-    void onUniprotMappingFinished(QString responseText);
+    //void onUniprotMappingFinished(MappingFromUniprot::MappingResult result, QString responseText);
+    void onUniprotMappingFinished(int result, QString responseText);
 
 protected:
     virtual void run();
     void processingInputFileAndWritingToTempFile();
+    void processingTempFileAndWritingToFinalOutputFile();
     QStringRef extractProteinId(QString attrProteinId);
 
 private:

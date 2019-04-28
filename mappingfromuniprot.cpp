@@ -125,6 +125,11 @@ void MappingFromUniprot::onRequestUniprotFinished(QNetworkReply *reply)
 
     QByteArray responseData = reply->readAll();
     QString decodedResponse = QString::fromUtf8(responseData);
+    if(decodedResponse.size() <= 3)
+    {
+        emit uniprotMappingFinished(MappingFromUniprot::MAPPING_FAIL,
+                                    "Nothing was responsed from the server");
+    }
     this->parseResponseText(decodedResponse);
 
 #ifdef QT_DEBUG
@@ -132,7 +137,17 @@ void MappingFromUniprot::onRequestUniprotFinished(QNetworkReply *reply)
 #endif
 
     reply->deleteLater();
-    emit uniprotMappingFinished(decodedResponse);
+    QTextStream bufFormatStream(&decodedResponse,QIODevice::ReadOnly);
+    QString top10LineOfDecodedResponse;
+    QString tempString;
+    for(int lineCount = 0; bufFormatStream.readLineInto(&tempString) && lineCount < 10;
+        lineCount++)
+    {
+        top10LineOfDecodedResponse.append(tempString + "\n");
+    }
+
+    emit uniprotMappingFinished(MappingFromUniprot::MAPPING_SUCCESS,
+                                top10LineOfDecodedResponse);
 }
 
 void MappingFromUniprot::onRequestErrorOccurred(QNetworkReply::NetworkError errorCode)

@@ -12,10 +12,27 @@ FileProcessingThread::FileProcessingThread(QString inputFilePath,
     this->outputFilePath = outputFilePath;
 }
 
-void FileProcessingThread::onUniprotMappingFinished(QString responseText)
+void FileProcessingThread::onUniprotMappingFinished(int result, QString responseText)
 {
-    emit progressUpdated("Request Finished!\nResponse from Uniprot:\n" + responseText);
+    if(result == MappingFromUniprot::MAPPING_SUCCESS)
+    {
+        emit progressUpdated("Request Finished!\nResponse from Uniprot:\n" +
+                             responseText + "\n...");
+    }
+    else
+    {
+        emit progressUpdated("Request Failed!\nThe internet connection may not available!");
 
+        emit progressUpdated("Thread exited. [Id: " +
+                             QString::number(quintptr(QThread::currentThreadId())) + "]");
+        this->mapUniprot->deleteLater();
+        this->quit();
+    }
+
+
+    this->sleep(1);
+    this->processingTempFileAndWritingToFinalOutputFile();
+    emit progressUpdated("Append mapping result to each line success!");
 
     emit progressUpdated("Thread exited. [Id: " +
                          QString::number(quintptr(QThread::currentThreadId())) + "]");
@@ -29,15 +46,19 @@ void FileProcessingThread::run()
                          QString::number(quintptr(QThread::currentThreadId())) + "]");
 
     this->mapUniprot = new MappingFromUniprot();
-    QObject::connect(this->mapUniprot,SIGNAL(uniprotMappingFinished(QString)),
-                     this,SLOT(onUniprotMappingFinished(QString)));
+    QObject::connect(this->mapUniprot,
+                     SIGNAL(uniprotMappingFinished(int,QString)),
+                     this,
+                     SLOT(onUniprotMappingFinished(int,QString))
+                     );
 
     this->processingInputFileAndWritingToTempFile();
+    this->sleep(1);
+    emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
     // Finished: Reading from input file and Writing to output file!
     // Next: proteinId -> query from uniprot -> uniprotKB
-    this->sleep(1);
+
     this->mapUniprot->startRequestToQueryUniprot();
-    emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
 
     this->exec();
 }
@@ -73,7 +94,7 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
     QString stringBuffer;
     qint32 loopCounts = 0;
 
-    // Fetch each line from the file
+    // Fetch each line from the inputFile
     while(inputFileStream.readLineInto(&stringBuffer))
     {
         if(stringBuffer.at(0) == '#') // Comments, skip
@@ -138,6 +159,63 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
 
     // Finished removing useless columns, and wrote to TemporaryFile
     // Protein_id map init finished
+}
+
+void FileProcessingThread::processingTempFileAndWritingToFinalOutputFile()
+{
+    // Open processed temp file for reading
+    QFile tempOutputFile(this->temporaryFilePath);
+    if( !tempOutputFile.open(QFile::ReadOnly) )
+    {
+        emit errorOccured("Unable to open tempFile");
+        return;
+    }
+    else
+    {
+        emit progressUpdated("Open temp file <" + this->temporaryFilePath + "> Success!");
+    }
+
+    // Create output file
+    QFile outputFile(this->outputFilePath);
+    if( !outputFile.open(QFile::WriteOnly) )
+    {
+        emit errorOccured("Distination dir is read-only");
+        return;
+    }
+    else
+    {
+        emit progressUpdated("Create output file <" + this->outputFilePath + "> Success!");
+    }
+
+    QTextStream tempOutputFileStream(&tempOutputFile);
+    QTextStream outputFileStream(&outputFile);
+    QString stringBuffer;
+    qint32 loopCounts = 0;
+
+    // Fetch each line from the tempFile
+    while(tempOutputFileStream.readLineInto(&stringBuffer))
+    {
+        // Example lines:
+        // chr1,65419,71585,ENSP00000493376
+        // chr1,65419,65433,ENSP00000493376
+        // chr1,65520,65573,ENSP00000493376
+        QString proteinId =
+                stringBuffer.section(',',-1,-1);
+
+        QString uniprotReturnedValue =
+                this->mapUniprot->getValueFromProteinMap(proteinId);
+
+        stringBuffer.append(',' + uniprotReturnedValue);
+        outputFileStream << stringBuffer + '\n';
+
+        loopCounts++;
+        if( 0 == loopCounts % 500)
+        {
+            emit progressUpdated("Processing the " +
+                                 QString::number(loopCounts) +
+                                 "th line: " + stringBuffer);
+        }
+    }
 
 }
 

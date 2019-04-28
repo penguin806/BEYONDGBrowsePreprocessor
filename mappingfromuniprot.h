@@ -6,10 +6,17 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
+
 class MappingFromUniprot : public QObject
 {
     Q_OBJECT
 public:
+    enum MappingResult {
+        MAPPING_SUCCESS,
+        MAPPING_FAIL
+    };
+    Q_ENUM(MappingResult)
+
     explicit MappingFromUniprot(QObject *parent = nullptr);
     ~MappingFromUniprot();
 
@@ -18,7 +25,9 @@ public:
     void startRequestToQueryUniprot();
 
 signals:
-    void uniprotMappingFinished(QString responseText);
+    //void uniprotMappingFinished(MappingFromUniprot::MappingResult result,
+    //                            QString responseText);
+    void uniprotMappingFinished(int result, QString responseText);
 
 public slots:
     void onRequestUniprotFinished(QNetworkReply *reply);
