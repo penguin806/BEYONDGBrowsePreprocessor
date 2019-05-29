@@ -129,6 +129,7 @@ void MappingFromUniprot::onRequestUniprotFinished(QNetworkReply *reply)
     {
         emit uniprotMappingFinished(MappingFromUniprot::MAPPING_FAIL,
                                     "Nothing was responsed from the server");
+        return;
     }
     this->parseResponseText(decodedResponse);
 

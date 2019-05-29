@@ -3,7 +3,6 @@
 #include <QFile>
 #include <QTextStream>
 #include <QThread>
-
 #include <QRegularExpression>
 
 FileProcessingThread::FileProcessingThread(QString inputFilePath,
@@ -29,6 +28,7 @@ void FileProcessingThread::onUniprotMappingFinished(int result, QString response
                              QString::number(quintptr(QThread::currentThreadId())) + "]");
         this->mapUniprot->deleteLater();
         this->quit();
+        return;
     }
 
 
@@ -40,6 +40,7 @@ void FileProcessingThread::onUniprotMappingFinished(int result, QString response
                          QString::number(quintptr(QThread::currentThreadId())) + "]");
     this->mapUniprot->deleteLater();
     this->quit();
+    return;
 }
 
 void FileProcessingThread::run()
@@ -125,17 +126,18 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
         gtfFields.frame = dataFields.at(7);
         gtfFields.attributes = dataFields.at(8).split(';',QString::SkipEmptyParts);
 
-
-        // Save fields useful to <outputFile> only
-
-        QString attributeProteinId; // Need protein_id only
+        // Save fields useful to <outputFile>
+        QString attributeProteinId; // We need protein_id only
         attributeProteinId = gtfFields.attributes.
                 filter("protein_id",Qt::CaseInsensitive).join(',');
 
         loopCounts++;
-        if(attributeProteinId.isEmpty())
+        if(gtfFields.source != "HAVANA" || gtfFields.feature != "transcript" //gtfFields.feature != "gene"
+                || attributeProteinId.isEmpty())
         {
-            // protein_id Not Found, Skip
+            // <source> is not 'HAVANA' OR <feature> is not 'transcript'
+            // OR <protein_id> Not Found, SKIP!
+            // qDebug() << loopCounts << gtfFields.source << gtfFields.feature;
         }
         else
         {
@@ -149,13 +151,13 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
                     + ',' +gtfFields.end + ',' + proteinIdExtracted;
 
             // 2019-05-30 Testing: observe the <gene_type> field
-            QRegularExpression re("^.*gene_type\\s\"(.*?)\".*;\n?");
-            QRegularExpressionMatch match = re.match(dataFields.at(8));
-            if(match.hasMatch())
-            {
-                // qDebug() << "match: " << match.captured(1) << match.captured(2);
-                stringBuffer += ',' + match.captured(1);
-            }
+//            QRegularExpression re("^.*gene_type\\s\"(.*?)\".*;\n?");
+//            QRegularExpressionMatch match = re.match(dataFields.at(8));
+//            if(match.hasMatch())
+//            {
+//                // qDebug() << "match: " << match.captured(1) << match.captured(2);
+//                stringBuffer += ',' + match.captured(1);
+//            }
 
             outputFileStream << stringBuffer << '\n';
 
