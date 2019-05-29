@@ -4,6 +4,8 @@
 #include <QTextStream>
 #include <QThread>
 
+#include <QRegularExpression>
+
 FileProcessingThread::FileProcessingThread(QString inputFilePath,
                                            QString outputFilePath,
                                            QObject *parent) : QThread(parent)
@@ -123,6 +125,7 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
         gtfFields.frame = dataFields.at(7);
         gtfFields.attributes = dataFields.at(8).split(';',QString::SkipEmptyParts);
 
+
         // Save fields useful to <outputFile> only
 
         QString attributeProteinId; // Need protein_id only
@@ -144,6 +147,16 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
 
             stringBuffer = gtfFields.seqName + ',' + gtfFields.start
                     + ',' +gtfFields.end + ',' + proteinIdExtracted;
+
+            // 2019-05-30 Testing: observe the <gene_type> field
+            QRegularExpression re("^.*gene_type\\s\"(.*?)\".*;\n?");
+            QRegularExpressionMatch match = re.match(dataFields.at(8));
+            if(match.hasMatch())
+            {
+                // qDebug() << "match: " << match.captured(1) << match.captured(2);
+                stringBuffer += ',' + match.captured(1);
+            }
+
             outputFileStream << stringBuffer << '\n';
 
             // emit progressUpdated(stringBuffer);
