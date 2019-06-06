@@ -23,7 +23,12 @@ class FileProcessingThread : public QThread
 {
     Q_OBJECT
 public:
-    FileProcessingThread(QString inputFilePath, QString outputFilePath, QObject *parent = Q_NULLPTR);
+    enum InputFileFormat {
+        INPUT_FILE_GTF,
+        INPUT_FILE_MSALIGN
+    };
+
+    FileProcessingThread(int inputFileFormat, QString inputFilePath, QString outputFilePath, QObject *parent = Q_NULLPTR);
 
 signals:
     void progressUpdated(QString newLine);
@@ -39,7 +44,10 @@ protected:
     void processingTempFileAndWritingToFinalOutputFile();
     QStringRef extractProteinId(QString attrProteinId);
 
+    void processingMsalignInputFileAndWritingToOutputFile();
+
 private:
+    int inputFileFormat;
     QString inputFilePath;
     QString outputFilePath;
     QString temporaryFilePath;

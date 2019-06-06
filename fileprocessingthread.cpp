@@ -5,10 +5,12 @@
 #include <QThread>
 #include <QRegularExpression>
 
-FileProcessingThread::FileProcessingThread(QString inputFilePath,
+FileProcessingThread::FileProcessingThread(int inputFileFormat,
+                                           QString inputFilePath,
                                            QString outputFilePath,
                                            QObject *parent) : QThread(parent)
 {
+    this->inputFileFormat = inputFileFormat;
     this->inputFilePath = inputFilePath;
     this->outputFilePath = outputFilePath;
 }
@@ -47,23 +49,39 @@ void FileProcessingThread::run()
 {
     emit progressUpdated("Thread started. [Id: " +
                          QString::number(quintptr(QThread::currentThreadId())) + "]");
+#ifdef QT_DEBUG
+    qDebug() << QString("InputFileFormat: ") + QString::number(this->inputFileFormat);
+    qDebug() << "InputFilePath: " + this->inputFilePath;
+    qDebug() << "OutputFilePath: " + this->outputFilePath;
+#endif
 
-    this->mapUniprot = new MappingFromUniprot();
-    QObject::connect(this->mapUniprot,
-                     SIGNAL(uniprotMappingFinished(int,QString)),
-                     this,
-                     SLOT(onUniprotMappingFinished(int,QString))
-                     );
+    if(this->inputFileFormat == FileProcessingThread::INPUT_FILE_GTF)
+    {
+        this->mapUniprot = new MappingFromUniprot();
+        QObject::connect(this->mapUniprot,
+                         SIGNAL(uniprotMappingFinished(int,QString)),
+                         this,
+                         SLOT(onUniprotMappingFinished(int,QString))
+                         );
+        this->processingInputFileAndWritingToTempFile();
+        this->sleep(1);
+        emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
+        // Finished: Reading from input file and Writing to output file!
+        // Next: proteinId -> query from uniprot -> uniprotKB
 
-    this->processingInputFileAndWritingToTempFile();
-    this->sleep(1);
-    emit progressUpdated("Remove duplicated protein_id finished!\nStart query from Uniprot...");
-    // Finished: Reading from input file and Writing to output file!
-    // Next: proteinId -> query from uniprot -> uniprotKB
-
-    this->mapUniprot->startRequestToQueryUniprot();
-
-    this->exec();
+        this->mapUniprot->startRequestToQueryUniprot();
+        this->exec();
+    }
+    else if (this->inputFileFormat == FileProcessingThread::INPUT_FILE_MSALIGN)
+    {
+        this->processingMsalignInputFileAndWritingToOutputFile();
+        emit progressUpdated("Parse msalign file and writing to output file success!");
+        this->sleep(1);
+        emit progressUpdated("Thread exited. [Id: " +
+                             QString::number(quintptr(QThread::currentThreadId())) + "]");
+        this->quit();
+        return;
+    }
 }
 
 void FileProcessingThread::processingInputFileAndWritingToTempFile()
@@ -261,6 +279,89 @@ QStringRef FileProcessingThread::extractProteinId(QString attrProteinId)
         {
             return attrProteinId.midRef(firstDoubleQuotationPos + 1,
                     lastDoubleQuotationPos - firstDoubleQuotationPos - 1);
+        }
+    }
+}
+
+void FileProcessingThread::processingMsalignInputFileAndWritingToOutputFile()
+{
+    // Convert .msalign file
+    QFile inputFile(this->inputFilePath);
+    if( !inputFile.open(QFile::ReadOnly) )
+    {
+        emit errorOccured("Unable to open file");
+        return;
+    }
+    else
+    {
+        emit progressUpdated("Open input file <" + this->inputFilePath + "> Success!");
+    }
+
+    QFile outputFile(this->outputFilePath);
+    if( !outputFile.open(QFile::WriteOnly) )
+    {
+        emit errorOccured("Distination dir is read-only");
+        return;
+    }
+    else
+    {
+        emit progressUpdated("Create output file <" + this->outputFilePath + "> Success!");
+    }
+
+    QTextStream inputFileStream(&inputFile);
+    QTextStream outputFileStream(&outputFile);
+    QString stringBuffer;
+    qint32 loopCounts = 0;
+
+    // Fetch each line from the inputFile
+    while(inputFileStream.readLineInto(&stringBuffer))
+    {
+        loopCounts++;
+        if(stringBuffer.isEmpty() || stringBuffer.at(0) == '#') // Comments, skip
+        {
+            continue;
+        }
+
+        if(stringBuffer.trimmed() == QString("BEGIN IONS"))
+        {
+            QString scanId;
+            QString msScanMassAndPeakAundance;
+            QRegularExpression regExpScanId("^SCANS=(\\d+)[\n\r]*");
+            QRegularExpression regExpScanMassAndPeakAundance("^([\\d.]*?)\t([\\d.]*?)\t([\\d.]*?)[\r\n]*$");
+
+            while (inputFileStream.readLineInto(&stringBuffer))
+            {
+                loopCounts++;
+                if(stringBuffer.trimmed() == QString("END IONS"))
+                {
+                    stringBuffer = scanId + ',' +
+                            msScanMassAndPeakAundance;
+
+                    outputFileStream << stringBuffer << '\n';
+                    break;
+                }
+
+                QRegularExpressionMatch match = regExpScanId.match(stringBuffer);
+                if(match.hasMatch())
+                {
+                    scanId = match.captured(1);
+                    continue;
+                }
+
+                match = regExpScanMassAndPeakAundance.match(stringBuffer);
+                if(match.hasMatch())
+                {
+                    msScanMassAndPeakAundance += match.captured(1)
+                            + ':' + match.captured(2) + '|';
+                }
+            }
+        }
+
+        if( 0 == loopCounts % 200)
+        {
+            emit progressUpdated("Processing the " +
+                                 QString::number(loopCounts) +
+                                 "th line: " + stringBuffer);
         }
     }
 }

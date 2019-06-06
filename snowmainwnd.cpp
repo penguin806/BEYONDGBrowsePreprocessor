@@ -1,4 +1,5 @@
 #include "snowmainwnd.h"
+#include "fileprocessingthread.h"
 #include "ui_snowmainwnd.h"
 #include <QMessageBox>
 #include <QFileDialog>
@@ -14,6 +15,12 @@ SnowMainWnd::SnowMainWnd(QWidget *parent) :
     this->fileThread = nullptr;
     this->elapsedTimer = new QElapsedTimer();
 
+    QStringList fileTypeList;
+    // fileTypeList << "Gtf (Genome Annotation)" << "MsAlign (Alignment Results)";
+    fileTypeList.insert(FileProcessingThread::INPUT_FILE_GTF, "Gtf (Genome Annotation)");
+    fileTypeList.insert(FileProcessingThread::INPUT_FILE_MSALIGN, "MsAlign (Alignment Results)");
+    this->ui->comboBox_FileType->addItems(fileTypeList);
+
     QObject::connect(this->ui->pushButton_Start,SIGNAL(clicked(bool)),
                      this,SLOT(onStartButtonClicked()));
 }
@@ -26,8 +33,10 @@ SnowMainWnd::~SnowMainWnd()
 void SnowMainWnd::onStartButtonClicked()
 {
     this->fileThread = new FileProcessingThread(
+                this->ui->comboBox_FileType->currentIndex(),
                 this->ui->lineEdit_InputFilePath->text(),
-                this->ui->lineEdit_OutputFilePath->text());
+                this->ui->lineEdit_OutputFilePath->text()
+                );
 
     QObject::connect(this->fileThread,SIGNAL(progressUpdated(QString)),
                      this,SLOT(onFileThreadProgressUpdated(QString)));
