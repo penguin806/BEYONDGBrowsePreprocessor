@@ -352,7 +352,7 @@ void FileProcessingThread::processingMsalignInputFileAndWritingToOutputFile()
                 if(match.hasMatch())
                 {
                     msScanMassAndPeakAundance += match.captured(1)
-                            + ':' + match.captured(2) + '|';
+                            + '~' + match.captured(2) + ';';
                 }
             }
         }
