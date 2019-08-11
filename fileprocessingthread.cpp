@@ -150,7 +150,7 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
                 filter("protein_id",Qt::CaseInsensitive).join(',');
 
         loopCounts++;
-        if(gtfFields.source != "HAVANA" || gtfFields.feature != "transcript" //gtfFields.feature != "gene"
+        if(gtfFields.source != "HAVANA" || gtfFields.feature != "transcript"
                 || attributeProteinId.isEmpty())
         {
             // <source> is not 'HAVANA' OR <feature> is not 'transcript'
@@ -166,7 +166,7 @@ void FileProcessingThread::processingInputFileAndWritingToTempFile()
             // Insert proteinId into map, preparing for query from uniprot
 
             stringBuffer = gtfFields.seqName + ',' + gtfFields.start
-                    + ',' +gtfFields.end + ',' + proteinIdExtracted;
+                    + ',' +gtfFields.end + ',' + gtfFields.strand + ',' + proteinIdExtracted;
 
             // 2019-05-30 Testing: observe the <gene_type> field
 //            QRegularExpression re("^.*gene_type\\s\"(.*?)\".*;\n?");
