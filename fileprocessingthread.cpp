@@ -325,9 +325,9 @@ void FileProcessingThread::processingMsalignInputFileAndWritingToOutputFile()
         if(stringBuffer.trimmed() == QString("BEGIN IONS"))
         {
             QString scanId;
-            QString msScanMassAndPeakAundance;
+            QString msScanMassAndPeakAundanceAndIonsNum;
             QRegularExpression regExpScanId("^SCANS=(\\d+)[\n\r]*");
-            QRegularExpression regExpScanMassAndPeakAundance("^([\\d.]*?)\t([\\d.]*?)\t([\\d.]*?)[\r\n]*$");
+            QRegularExpression regExpScanMassAndPeakAundance("^([\\d\\.]*?)\t([\\d\\.]*?)\t([\\d]+)[\r\n]*$");
 
             while (inputFileStream.readLineInto(&stringBuffer))
             {
@@ -335,7 +335,7 @@ void FileProcessingThread::processingMsalignInputFileAndWritingToOutputFile()
                 if(stringBuffer.trimmed() == QString("END IONS"))
                 {
                     stringBuffer = scanId + ',' +
-                            msScanMassAndPeakAundance;
+                            msScanMassAndPeakAundanceAndIonsNum;
 
                     outputFileStream << stringBuffer << '\n';
                     break;
@@ -351,8 +351,9 @@ void FileProcessingThread::processingMsalignInputFileAndWritingToOutputFile()
                 match = regExpScanMassAndPeakAundance.match(stringBuffer);
                 if(match.hasMatch())
                 {
-                    msScanMassAndPeakAundance += match.captured(1)
-                            + '~' + match.captured(2) + ';';
+                    msScanMassAndPeakAundanceAndIonsNum += match.captured(1)
+                            + '~' + match.captured(2)
+                            + '~' + match.captured(3) + ';';
                 }
             }
         }
