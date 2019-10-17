@@ -18,7 +18,7 @@ SnowMainWnd::SnowMainWnd(QWidget *parent) :
     QStringList fileTypeList;
     // fileTypeList << "Gtf (Genome Annotation)" << "MsAlign (Alignment Results)";
     fileTypeList.insert(FileProcessingThread::INPUT_FILE_GTF, "Gtf (Genome Annotation)");
-    fileTypeList.insert(FileProcessingThread::INPUT_FILE_MSALIGN, "MsAlign (Alignment Results)");
+    fileTypeList.insert(FileProcessingThread::INPUT_FILE_MSALIGN, "MsAlign (Deconvoluted Spectra)");
     this->ui->comboBox_FileType->addItems(fileTypeList);
 
     QObject::connect(this->ui->pushButton_Start,SIGNAL(clicked(bool)),
