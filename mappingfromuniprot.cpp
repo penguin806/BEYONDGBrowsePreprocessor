@@ -8,9 +8,6 @@ MappingFromUniprot::MappingFromUniprot(QObject *parent) : QObject(parent)
 {
     this->netManager = new QNetworkAccessManager(this);
 
-    // f**k stuff, after redirecting, the content-length doesn't change, that cause error 408
-    //this->netManager->setRedirectPolicy(QNetworkRequest::SameOriginRedirectPolicy);
-
     QObject::connect(this->netManager,SIGNAL(finished(QNetworkReply*)),
                      this,SLOT(onRequestUniprotFinished(QNetworkReply*)));
 }
@@ -79,7 +76,7 @@ void MappingFromUniprot::parseResponseText(QString decodedResponse)
 
 void MappingFromUniprot::startRequestToQueryUniprot()
 {
-    QUrl uniprotUrl("https://www.uniprot.org/uploadlists/");
+    QUrl uniprotUrl("https://legacy.uniprot.org/uploadlists/");
     QByteArray uniprotQuery = this->generateUniprotQueryString().toUtf8();
 
     QNetworkRequest request(uniprotUrl);
@@ -110,7 +107,7 @@ void MappingFromUniprot::onRequestUniprotFinished(QNetworkReply *reply)
     if(reply->hasRawHeader("Location"))
     {
         QString pathToRedirect = QString::fromUtf8(reply->rawHeader("Location"));
-        QUrl uniprotRedirectedUrl("https://www.uniprot.org/");
+        QUrl uniprotRedirectedUrl("https://legacy.uniprot.org/");
         uniprotRedirectedUrl.setPath(pathToRedirect);
 
         QNetworkRequest secondRequest(uniprotRedirectedUrl);
